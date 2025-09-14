@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Next Level Password Generator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        /* Custom styles for the "hacker" theme and animations */
+        body {
+            font-family: 'Roboto Mono', monospace;
+            background-color: #0d1117;
+            color: #c9d1d9;
+            overflow: hidden; /* Hide scrollbars from canvas */
+        }
+
+        #matrix-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            opacity: 0.15;
+        }
+
+        .container {
+            position: relative;
+            z-index: 1;
+            background-color: rgba(13, 17, 23, 0.85);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(48, 54, 61, 0.7);
+        }
+
+        .neon-text {
+            text-shadow: 0 0 5px #00e676, 0 0 10px #00e676, 0 0 15px #00e676;
+        }
+
+        .btn-generate {
+            background-color: #2ea043;
+            box-shadow: 0 0 10px #2ea043, 0 0 20px #2ea043;
+            transition: all 0.3s ease-in-out;
+        }
+
+        .btn-generate:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 0 15px #3edc5a, 0 0 30px #3edc5a;
+        }
+
+        .password-display {
+            background-color: #010409;
+            border: 1px solid #30363d;
+            transition: all 0.3s ease;
+            word-break: break-all;
+        }
+
+        /* Custom checkbox style */
+        .cyber-checkbox {
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border: 2px solid #30a14e;
+            border-radius: 4px;
+            cursor: pointer;
+            position: relative;
+            transition: all 0.2s ease;
+        }
+
+        .cyber-checkbox:checked {
+            background-color: #30a14e;
+            box-shadow: 0 0 10px #30a14e;
+        }
+
+        .cyber-checkbox:checked::after {
+            content: '✓';
+            font-size: 14px;
+            color: #0d1117;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+        
+        /* Custom slider style */
+        input[type="range"] {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 100%;
+            height: 8px;
+            background: #161b22;
+            outline: none;
+            border-radius: 4px;
+            border: 1px solid #30363d;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            background: #2ea043;
+            cursor: pointer;
+            border-radius: 50%;
+            box-shadow: 0 0 8px #2ea043;
+            transition: background 0.3s ease-in-out;
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            background: #2ea043;
+            cursor: pointer;
+            border-radius: 50%;
+            box-shadow: 0 0 8px #2ea043;
+        }
+
+        .strength-bar {
+            transition: width 0.5s ease-in-out, background-color 0.5s ease-in-out;
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen p-4">
+    <canvas id="matrix-canvas"></canvas>
+
+    <div class="container w-full max-w-lg p-6 md:p-8 mx-auto space-y-6 rounded-2xl shadow-2xl">
+        <!-- Header -->
+        <div class="text-center">
+            <h1 class="text-3xl md:text-4xl font-bold text-green-400 neon-text">Password Generator</h1>
+            <p class="text-sm text-gray-400 mt-2">Create secure and random passwords</p>
+        </div>
+
+        <!-- Password Display -->
+        <div class="relative flex items-center">
+            <div id="passwordDisplay" class="password-display w-full p-4 rounded-lg text-lg md:text-xl tracking-wider select-all">
+                P@$$w0rd!
+            </div>
+            <button id="copyBtn" class="absolute right-2 p-2 rounded-md bg-gray-700 hover:bg-gray-600 transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-gray-300"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+            </button>
+        </div>
+        <div id="copy-message" class="text-center text-green-400 opacity-0 transition-opacity duration-300">Copied to clipboard!</div>
+
+
+        <!-- Customization Options -->
+        <div class="space-y-6">
+            <!-- Password Length -->
+            <div class="flex flex-col space-y-3">
+                <div class="flex justify-between items-center">
+                    <label for="length" class="font-semibold text-lg">Password Length</label>
+                    <span id="lengthValue" class="text-2xl font-bold text-green-400">16</span>
+                </div>
+                <input type="range" id="length" min="6" max="32" value="16" class="w-full h-2 rounded-lg cursor-pointer">
+            </div>
+
+            <!-- Character Options -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div class="flex items-center space-x-3">
+                    <input type="checkbox" id="uppercase" checked class="cyber-checkbox">
+                    <label for="uppercase" class="text-lg cursor-pointer">Uppercase (A-Z)</label>
+                </div>
+                <div class="flex items-center space-x-3">
+                    <input type="checkbox" id="lowercase" checked class="cyber-checkbox">
+                    <label for="lowercase" class="text-lg cursor-pointer">Lowercase (a-z)</label>
+                </div>
+                <div class="flex items-center space-x-3">
+                    <input type="checkbox" id="numbers" checked class="cyber-checkbox">
+                    <label for="numbers" class="text-lg cursor-pointer">Numbers (0-9)</label>
+                </div>
+                <div class="flex items-center space-x-3">
+                    <input type="checkbox" id="symbols" checked class="cyber-checkbox">
+                    <label for="symbols" class="text-lg cursor-pointer">Symbols (!@#$)</label>
+                </div>
+            </div>
+            
+             <!-- Password Strength -->
+            <div class="space-y-2">
+                <span class="font-semibold text-lg">Strength:</span>
+                <div class="w-full bg-gray-700 rounded-full h-4 border border-gray-600">
+                    <div id="strengthBar" class="h-full rounded-full strength-bar"></div>
+                </div>
+                <p id="strengthText" class="text-center text-sm font-bold"></p>
+            </div>
+        </div>
+
+        <!-- Generate Button -->
+        <button id="generateBtn" class="btn-generate w-full py-4 text-xl font-bold text-white rounded-lg">
+            Generate Password
+        </button>
+    </div>
+
+    <script>
+        // Matrix Rain Animation
+        const canvas = document.getElementById('matrix-canvas');
+        const ctx = canvas.getContext('2d');
+
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ123456789@#$%^&*()*&^%+-/~{[|`]}';
+        const fontSize = 16;
+        const columns = canvas.width / fontSize;
+        const drops = Array.from({ length: columns }).fill(1);
+
+        function drawMatrix() {
+            ctx.fillStyle = 'rgba(13, 17, 23, 0.05)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            ctx.fillStyle = '#00e676';
+            ctx.font = `${fontSize}px arial`;
+
+            for (let i = 0; i < drops.length; i++) {
+                const text = letters[Math.floor(Math.random() * letters.length)];
+                ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+
+                if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) {
+                    drops[i] = 0;
+                }
+                drops[i]++;
+            }
+        }
+
+        setInterval(drawMatrix, 40);
+
+        window.addEventListener('resize', () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            // Recalculate columns and drops on resize
+            const newColumns = canvas.width / fontSize;
+            drops.length = newColumns;
+            drops.fill(1);
+        });
+
+        // Password Generator Logic
+        const lengthSlider = document.getElementById('length');
+        const lengthValue = document.getElementById('lengthValue');
+        const passwordDisplay = document.getElementById('passwordDisplay');
+        const generateBtn = document.getElementById('generateBtn');
+        const copyBtn = document.getElementById('copyBtn');
+        const copyMessage = document.getElementById('copy-message');
+
+        const uppercaseEl = document.getElementById('uppercase');
+        const lowercaseEl = document.getElementById('lowercase');
+        const numbersEl = document.getElementById('numbers');
+        const symbolsEl = document.getElementById('symbols');
+        
+        const strengthBar = document.getElementById('strengthBar');
+        const strengthText = document.getElementById('strengthText');
+
+        const charSets = {
+            uppercase: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
+            lowercase: 'abcdefghijklmnopqrstuvwxyz',
+            numbers: '0123456789',
+            symbols: '!@#$%^&*()_+~`|}{[]:;?><,./-='
+        };
+
+        // Update length display on slider input
+        lengthSlider.addEventListener('input', (event) => {
+            lengthValue.textContent = event.target.value;
+            updatePasswordStrength();
+        });
+
+        // Event listeners for checkboxes to update strength
+        [uppercaseEl, lowercaseEl, numbersEl, symbolsEl].forEach(el => {
+            el.addEventListener('change', updatePasswordStrength);
+        });
+
+        // Generate password function
+        function generatePassword() {
+            const length = +lengthSlider.value;
+            let characterPool = '';
+            let generatedPassword = '';
+            
+            const typesArr = [{
+                type: 'uppercase', checked: uppercaseEl.checked
+            }, {
+                type: 'lowercase', checked: lowercaseEl.checked
+            }, {
+                type: 'numbers', checked: numbersEl.checked
+            }, {
+                type: 'symbols', checked: symbolsEl.checked
+            }];
+            
+            const typesChecked = typesArr.filter(item => item.checked);
+
+            if (typesChecked.length === 0) {
+                passwordDisplay.textContent = "Select options!";
+                updatePasswordStrength(0);
+                return;
+            }
+
+            // Build character pool and guarantee one of each selected type
+            typesChecked.forEach(type => {
+                characterPool += charSets[type.type];
+                const charSet = charSets[type.type];
+                generatedPassword += charSet[Math.floor(Math.random() * charSet.length)];
+            });
+
+            // Fill the rest of the password length
+            for (let i = generatedPassword.length; i < length; i++) {
+                const randomIndex = Math.floor(Math.random() * characterPool.length);
+                generatedPassword += characterPool[randomIndex];
+            }
+            
+            // Shuffle the password to make it more random
+            passwordDisplay.textContent = shuffleString(generatedPassword);
+            updatePasswordStrength();
+        }
+        
+        function shuffleString(s) {
+            const arr = s.split('');
+            for (let i = arr.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [arr[i], arr[j]] = [arr[j], arr[i]];
+            }
+            return arr.join('');
+        }
+
+        function updatePasswordStrength(forceScore = null) {
+            let score = 0;
+            if (forceScore === 0) {
+                 // Handle the case where no options are selected
+            } else {
+                const length = +lengthSlider.value;
+                score += length * 2;
+                if (uppercaseEl.checked) score += 5;
+                if (lowercaseEl.checked) score += 5;
+                if (numbersEl.checked) score += 5;
+                if (symbolsEl.checked) score += 10;
+            }
+
+            let width = (score / 100) * 100;
+            if (width > 100) width = 100;
+            strengthBar.style.width = `${width}%`;
+
+            if (score > 80) {
+                strengthBar.style.backgroundColor = '#2ea043'; // Strong green
+                strengthText.textContent = 'Very Strong';
+                strengthText.style.color = '#2ea043';
+            } else if (score > 60) {
+                strengthBar.style.backgroundColor = '#f1e05a'; // Medium yellow
+                strengthText.textContent = 'Strong';
+                 strengthText.style.color = '#f1e05a';
+            } else if (score > 40) {
+                strengthBar.style.backgroundColor = '#ffc107'; // Weak orange
+                strengthText.textContent = 'Medium';
+                strengthText.style.color = '#ffc107';
+            } else {
+                strengthBar.style.backgroundColor = '#d73a49'; // Very weak red
+                strengthText.textContent = 'Weak';
+                strengthText.style.color = '#d73a49';
+            }
+        }
+
+
+        // Generate button event listener
+        generateBtn.addEventListener('click', generatePassword);
+
+        // Copy to clipboard function
+        copyBtn.addEventListener('click', () => {
+            const password = passwordDisplay.textContent;
+            if (password && password !== "Select options!") {
+                const textarea = document.createElement('textarea');
+                textarea.value = password;
+                document.body.appendChild(textarea);
+                textarea.select();
+                try {
+                    document.execCommand('copy');
+                    copyMessage.style.opacity = '1';
+                    setTimeout(() => {
+                        copyMessage.style.opacity = '0';
+                    }, 2000);
+                } catch (err) {
+                    console.error('Failed to copy text: ', err);
+                }
+                document.body.removeChild(textarea);
+            }
+        });
+
+        // Initial password generation and strength check on page load
+        generatePassword();
+
+    </script>
+</body>
+</html>
